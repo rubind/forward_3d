@@ -19,22 +19,24 @@ def save_img(dat, imname, waves = None):
     fitsobj.close()
 
 def load_basis_fn():
-    f = pyfits.open("../psfs/basis_5_mas.fits")
-    basis = f[0].data
-    f.close()
-    vals0 = arange(len(basis), dtype=float64)
-    vals1 = arange(len(basis), dtype=float64)
+    basisfns = {}
+    for item in unique(thetadithers):
+        f = pyfits.open("../psfs/basis_5_mas_rot=%.3f.fits" % item)
+        basis = f[0].data
+        f.close()
+        vals0 = arange(len(basis), dtype=float64)
+        vals1 = arange(len(basis), dtype=float64)
+        
+        inds = where(basis == basis.max())
+        vals0 -= vals0[inds[0]]
+        vals1 -= vals1[inds[0]]
+        
+        vals0 *= pixel_scale/float(oversample)
+        vals1 *= pixel_scale/float(oversample)
+        
+        basisfns[item] = RectBivariateSpline(vals0, vals1, basis, kx = 3, ky = 3, s = 0)
 
-    inds = where(basis == basis.max())
-    vals0 -= vals0[inds[0]]
-    vals1 -= vals1[inds[0]]
-    
-    vals0 *= pixel_scale/float(oversample)
-    vals1 *= pixel_scale/float(oversample)
-    
-    print vals0
-
-    return RectBivariateSpline(vals0, vals1, basis, kx = 3, ky = 3, s = 0)
+    return basisfns
 
     
 def bin_to_pixels(to_bin, the_output, wave, scale = 1.):
@@ -86,7 +88,7 @@ def make_dither(inputs):
             nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
             nodey = node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
 
-            basis_eval = basis_fn(xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
+            basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
             
             for n in range(hard_code): # Subsampled wavelength
                 
@@ -98,12 +100,12 @@ def make_dither(inputs):
                 for item in wave_to_inds[n]:
                     whole_term[:,item[2]] = sum(unbinned_term[:,item[0]:item[1]], axis = 1)
 
-                outputs[m, k] += whole_term*node_vals[i]*wavelength_splines[node_xy[i][3],n]
+                outputs[m, k] += whole_term*node_vals[i]*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
                 if resid != None:
-                    gradient[i] += -2.*sum(whole_term*resid[m,k]*wavelength_splines[node_xy[i][3],n])
+                    gradient[i] += -2.*sum(whole_term*resid[m,k]*wavelength_splines[node_xy[i][3],n]*scaledithers[m])
 
     return outputs, gradient
-
+                                           
     
 def get_scene(node_vals, xdithers, ydithers, thetadithers, resid = None):
     results = pool.map(make_dither, [(k, node_vals, resid) for k in range(n_slice)])
@@ -160,14 +162,15 @@ pixel_scale = 0.05 # Arcseconds
 slice_scale = 0.15 # Arcseconds
 n_slice = 20
 slice_width = 3 # Arcseconds, not pixels!
-n_wave = 15
+n_wave = 7
 basis_step = 0.035 # Arcseconds
 oversample = 10
-hard_code = 22 # Number of sub-sampled wavelengths
+hard_code = 36 # Number of sub-sampled wavelengths
 
-xdithers = [0., 0.025, 0, 0.025]*2
-ydithers = [0., 0., 0.025, 0.025]*2
-thetadithers = [0]*4 + [pi/2.]*4
+xdithers = [0., 0.025, 0, 0.025]*2 + [0.02]
+ydithers = [0., 0., 0.025, 0.025]*2 + [0.02]
+thetadithers = [0]*4 + [pi/2.]*4 + [pi/4.]
+scaledithers = [1.]*8 + [0.01]
 
 ########################################## Done with setup ##########################################
 
@@ -176,13 +179,13 @@ n_wave_spline = int(around(hard_code/(basis_step/pixel_scale * oversample))) + 1
 print "n_wave_spline", n_wave_spline
 
 wave_to_inds = get_wave_to_inds()
-basis_fn = load_basis_fn()
+basis_fns = load_basis_fn()
 node_xy, wavelength_splines = get_spline_nodes(scale = 0.5)
 
 xvals = arange(-1.475, 1.5, 0.05)
 yvals = arange(-1.5, 1.5, 0.005)
 
-pool = mp.Pool(processes = 7)
+pool = mp.Pool(processes = 10)
 
 ########################################## Done with derived quantities ##########################################
 
