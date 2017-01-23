@@ -7,6 +7,7 @@ import multiprocessing as mp
 from matplotlib import use
 use("PDF")
 import matplotlib.pyplot as plt
+import sys
 
 
 def save_img(dat, imname, waves = None):
@@ -17,6 +18,20 @@ def save_img(dat, imname, waves = None):
     fitsobj.append(hdu)
     fitsobj.writeto(imname)
     fitsobj.close()
+
+def get_params():
+    f = open(sys.argv[1])
+    lines = f.read().split('\n')
+    f.close()
+
+    params = {}
+    for line in lines:
+        if line.count("#") == 0:
+            parsed = line.split(None)
+            if len(parsed) > 1:
+                params[parsed[0]] = eval(" ".join(parsed[1:]))
+    return params
+    
 
 def load_basis_fn():
     basisfns = {}
@@ -60,7 +75,7 @@ def bin_to_pixels(to_bin, the_output, wave, scale = 1.):
 def get_wave_to_inds():
     wave_to_inds = []
 
-    for wave in range(hard_code):
+    for wave in range(n_subwave):
         the_range = arange(oversample*slice_scale/pixel_scale)
         output_pixel = array(floor((wave + the_range) / float(oversample)), dtype=int32)
 
@@ -90,7 +105,7 @@ def make_dither(inputs):
 
             basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
             
-            for n in range(hard_code): # Subsampled wavelength
+            for n in range(n_subwave): # Subsampled wavelength
                 
                 #this_term = zeros([slice_width/pixel_scale, n_wave])
                 #this_term = bin_to_pixels(basis_eval[:,k*30:(k+1)*30], this_term, wave = n, scale = 1.0)
@@ -141,7 +156,7 @@ def get_spline_nodes(scale = 0.9):
 
         ifn = interp1d(xvals, yvals, kind = 'cubic')
 
-        wavelength_splines.append(ifn(arange(hard_code, dtype=float64)/(basis_step/pixel_scale * oversample))
+        wavelength_splines.append(ifn(arange(n_subwave, dtype=float64)/(basis_step/pixel_scale * oversample))
                                   )
         plt.plot(wavelength_splines[-1])
     plt.savefig("wavelength_splines.pdf")
@@ -158,34 +173,37 @@ Coordinates:
 
 """
 
-pixel_scale = 0.05 # Arcseconds
-slice_scale = 0.15 # Arcseconds
-n_slice = 20
-slice_width = 3 # Arcseconds, not pixels!
-n_wave = 7
-basis_step = 0.035 # Arcseconds
-oversample = 10
-hard_code = 36 # Number of sub-sampled wavelengths
+params = get_params()
 
-xdithers = [0., 0.025, 0, 0.025]*2 + [0.02]
-ydithers = [0., 0., 0.025, 0.025]*2 + [0.02]
-thetadithers = [0]*4 + [pi/2.]*4 + [pi/4.]
-scaledithers = [1.]*8 + [0.01]
+pixel_scale = params["pixel_scale"]
+slice_scale = params["slice_scale"]
+n_slice = params["n_slice"]
+slice_width = params["slice_width"]
+n_wave = params["n_wave"]
+basis_step = params["basis_step"]
+oversample = params["oversample"]
+n_subwave = params["n_subwave"]
+
+xdithers = params["xdithers"]
+ydithers = params["ydithers"]
+thetadithers = params["thetadithers"]
+scaledithers = params["scaledithers"]
 
 ########################################## Done with setup ##########################################
 
-assert isclose(hard_code % (basis_step/pixel_scale * oversample), 1.0)
-n_wave_spline = int(around(hard_code/(basis_step/pixel_scale * oversample))) + 1
+assert isclose(n_subwave % (basis_step/pixel_scale * oversample), 1.0)
+n_wave_spline = int(around(n_subwave/(basis_step/pixel_scale * oversample))) + 1
 print "n_wave_spline", n_wave_spline
 
 wave_to_inds = get_wave_to_inds()
 basis_fns = load_basis_fn()
-node_xy, wavelength_splines = get_spline_nodes(scale = 0.5)
+node_xy, wavelength_splines = get_spline_nodes(scale = params["max_spline_rad"])
+print "number of nodes", len(node_xy)
 
 xvals = arange(-1.475, 1.5, 0.05)
 yvals = arange(-1.5, 1.5, 0.005)
 
-pool = mp.Pool(processes = 10)
+pool = mp.Pool(processes = params["processes"])
 
 ########################################## Done with derived quantities ##########################################
 

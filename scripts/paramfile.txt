@@ -1,0 +1,29 @@
+# Arcseconds:
+pixel_scale		0.05
+# Arcseconds:
+slice_scale		0.15
+# Arcseconds:
+basis_step		0.035
+# Relative to FoV:
+max_spline_rad		0.5
+
+
+n_slice			20
+# Number of wavelengths to simulate. Must be large enough for n_subwave
+n_wave			7
+# Number of sub-sampled wavelengths:
+n_subwave		36
+oversample		10
+
+# Arcseconds, not pixels!
+slice_width		3
+
+# Arcseconds, not pixels!
+xdithers		[0., 0.025, 0, 0.025]*2 + [0.02]
+ydithers		[0., 0., 0.025, 0.025]*2 + [0.02]
+# Radians:
+thetadithers		[0]*4 + [1.570796]*4 + [0.785398]
+scaledithers		[1.]*8 + [0.01]
+
+# Number of cores (max = n_slice)
+processes		20
