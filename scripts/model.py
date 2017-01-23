@@ -78,8 +78,9 @@ def make_dither(inputs):
     outputs = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     gradient = zeros(len(node_xy), dtype=float64)
 
+    if k % 10 == 0:
+        print "Slice ", k
     for m in range(len(xdithers)):
-        print "Dither ", m
 
         for i in range(len(node_xy)):
             nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
@@ -99,7 +100,7 @@ def make_dither(inputs):
 
                 outputs[m, k] += whole_term*node_vals[i]*wavelength_splines[node_xy[i][3],n]
                 if resid != None:
-                    gradient[i] += -2.*sum(whole_term*resid[m,k])
+                    gradient[i] += -2.*sum(whole_term*resid[m,k]*wavelength_splines[node_xy[i][3],n])
 
     return outputs, gradient
 
@@ -162,11 +163,11 @@ slice_width = 3 # Arcseconds, not pixels!
 n_wave = 15
 basis_step = 0.035 # Arcseconds
 oversample = 10
-hard_code = 43 # Number of sub-sampled wavelengths
+hard_code = 22 # Number of sub-sampled wavelengths
 
-xdithers = [0., 0.025, 0, 0.025]
-ydithers = [0., 0., 0, 0]
-thetadithers = [0,0, pi/2., pi/2.]
+xdithers = [0., 0.025, 0, 0.025]*2
+ydithers = [0., 0., 0.025, 0.025]*2
+thetadithers = [0]*4 + [pi/2.]*4
 
 ########################################## Done with setup ##########################################
 
@@ -181,7 +182,7 @@ node_xy, wavelength_splines = get_spline_nodes(scale = 0.5)
 xvals = arange(-1.475, 1.5, 0.05)
 yvals = arange(-1.5, 1.5, 0.005)
 
-pool = mp.Pool(processes = 2)
+pool = mp.Pool(processes = 7)
 
 ########################################## Done with derived quantities ##########################################
 
@@ -214,4 +215,4 @@ def chi2fn(x):
 
 from scipy.optimize import minimize
 
-opt_res = minimize(chi2fn, x0 = zeros(len(node_xy)), method="L-BFGS-B", jac = True, options = dict(disp = True))
+opt_res = minimize(chi2fn, x0 = zeros(len(node_xy)), method="L-BFGS-B", jac = True, options = dict(disp = True, maxcor = 30))
