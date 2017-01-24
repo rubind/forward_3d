@@ -36,7 +36,7 @@ def get_params():
 def load_basis_fn():
     basisfns = {}
     for item in unique(thetadithers):
-        f = pyfits.open("../psfs/basis_5_mas_rot=%.3f.fits" % item)
+        f = pyfits.open("../../psfs/basis_5_mas_rot=%.3f.fits" % item)
         basis = f[0].data
         f.close()
         vals0 = arange(len(basis), dtype=float64)
