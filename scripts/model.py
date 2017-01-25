@@ -8,6 +8,7 @@ from matplotlib import use
 use("PDF")
 import matplotlib.pyplot as plt
 import sys
+from scipy.optimize import minimize
 
 
 def save_img(dat, imname, waves = None):
@@ -89,6 +90,29 @@ def get_wave_to_inds():
         wave_to_inds.append(the_ranges)
     return wave_to_inds
 
+def make_jacobian():
+    jacobian = zeros([len(xdithers)*n_slice*(slice_width/pixel_scale)*n_wave, len(node_xy)], dtype=float64)
+    
+    for m in range(len(xdithers)):
+        for i in range(len(node_xy)):
+            nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
+            nodey = node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
+            
+            basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
+
+            for n in range(n_subwave): # Subsampled wavelength
+                unbinned_term = basis_eval[:,k*30:(k+1)*30]
+                whole_term = outputs[m,k]*0.
+
+                for item in wave_to_inds[n]:
+                    whole_term[:,item[2]] = sum(unbinned_term[:,item[0]:item[1]], axis = 1)
+
+                outputs[m, k] += whole_term*node_vals[i]*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
+
+            jacobian[:, i] = 0
+
+    return jacobian
+
 
 def make_dither(inputs):
     k, node_vals, resid = inputs
@@ -164,6 +188,15 @@ def get_spline_nodes(scale = 0.9):
 
     return node_xy, array(wavelength_splines)
     
+def chi2fn(x):
+    scene, NA = get_scene(x, xdithers, ydithers, thetadithers)
+    resid = true_scene - scene
+    save_img(resid, "resid.fits")
+    
+    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, resid = resid)
+
+    print sum(resid**2.), log10(sum(resid**2.))
+    return sum(resid**2.), gradient
 
 
 
@@ -220,20 +253,22 @@ t2 = time.time()
 
 print "True scene in ", t2 - t
 
+if params["max_noise_to_signal"] > 0:
+    save_img(true_scene, "noise_free_scene.fits")
+    noise_scale = abs(true_scene).max()*params["max_noise_to_signal"]
+
+    for i in range(len(scaledithers)):
+        true_scene[i] += random.normal(size = true_scene[i].shape)*noise_scale*scaledithers[i]
+
 #true_scene /= true_scene.max()
 #true_scene += random.normal(size = true_scene.shape)*0.1
 
 save_img(true_scene, "true_scene.fits")
 
 
-def chi2fn(x):
-    scene, NA = get_scene(x, xdithers, ydithers, thetadithers)
-    resid = true_scene - scene
-    save_img(resid, "resid.fits")
-    
-    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, resid = resid)
-    return sum(resid**2.), gradient
 
-from scipy.optimize import minimize
 
 opt_res = minimize(chi2fn, x0 = zeros(len(node_xy)), method="L-BFGS-B", jac = True, options = dict(disp = True, maxcor = 30))
+#opt_res = minimize(chi2fn, x0 = zeros(len(node_xy)), method="BFGS", jac = True, options = dict(disp = True))
+#opt_res = minimize(chi2fn, x0 = zeros(len(node_xy)), method="CG", jac = True, options = dict(disp = True))
+#opt_res = minimize(chi2fn, x0 = zeros(len(node_xy)), method="Newton-CG", jac = True, options = dict(disp = True))

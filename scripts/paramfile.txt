@@ -30,4 +30,5 @@ scaledithers		[1.]*8 + [0.01]
 # Number of cores (max = n_slice)
 processes		20
 
-add_noise		0
+max_noise_to_signal	0
+
