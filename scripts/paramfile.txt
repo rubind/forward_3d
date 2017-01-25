@@ -19,7 +19,9 @@ oversample		10
 slice_width		3
 
 # Arcseconds, not pixels!
+# Parallel to slit
 xdithers		[0., 0.025, 0, 0.025]*2 + [0.02]
+# Perpendicular to slit
 ydithers		[0., 0., 0.025, 0.025]*2 + [0.02]
 # Radians:
 thetadithers		[0]*4 + [1.570796]*4 + [0.785398]
@@ -27,3 +29,5 @@ scaledithers		[1.]*8 + [0.01]
 
 # Number of cores (max = n_slice)
 processes		20
+
+add_noise		0
