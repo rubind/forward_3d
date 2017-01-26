@@ -92,24 +92,27 @@ def get_wave_to_inds():
 
 def make_jacobian():
     jacobian = zeros([len(xdithers)*n_slice*(slice_width/pixel_scale)*n_wave, len(node_xy)], dtype=float64)
-    
-    for m in range(len(xdithers)):
-        for i in range(len(node_xy)):
+
+    for i in range(len(node_xy)):
+        tmpout = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
+
+        for m in range(len(xdithers)):
             nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
             nodey = node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
             
             basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
 
-            for n in range(n_subwave): # Subsampled wavelength
-                unbinned_term = basis_eval[:,k*30:(k+1)*30]
-                whole_term = outputs[m,k]*0.
 
-                for item in wave_to_inds[n]:
-                    whole_term[:,item[2]] = sum(unbinned_term[:,item[0]:item[1]], axis = 1)
+            for k in range(n_slice):
+                
 
-                outputs[m, k] += whole_term*node_vals[i]*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
+                for n in range(n_subwave): # Subsampled wavelength
+                    unbinned_term = basis_eval[:,k*30:(k+1)*30]
+                    
+                    for item in wave_to_inds[n]:
+                        tmpout[m, k, :,item[2]] += sum(unbinned_term[:,item[0]:item[1]], axis = 1)*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
 
-            jacobian[:, i] = 0
+        jacobian[:, i] += reshape(tmpout, len(xdithers)*n_slice*(slice_width/pixel_scale)*n_wave)
 
     return jacobian
 
@@ -245,6 +248,7 @@ pool = mp.Pool(processes = params["processes"])
 
 true_node_vals = random.normal(size = len(node_xy))
 
+save_img(true_node_vals, "true_node_vals.fits")
 
 
 t = time.time()
@@ -252,6 +256,7 @@ true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers)
 t2 = time.time()
 
 print "True scene in ", t2 - t
+
 
 if params["max_noise_to_signal"] > 0:
     save_img(true_scene, "noise_free_scene.fits")
@@ -264,6 +269,18 @@ if params["max_noise_to_signal"] > 0:
 #true_scene += random.normal(size = true_scene.shape)*0.1
 
 save_img(true_scene, "true_scene.fits")
+
+
+
+
+if params["jacobian_instead"] == 1:
+    jacobian = make_jacobian()
+    save_img(jacobian, "jacobian.fits")
+
+    #true_scene2 = dot(jacobian, true_node_vals)
+    #true_scene2 = reshape(true_scene2, true_scene.shape)
+    #print abs(true_scene - true_scene2).max()
+    stop_now
 
 
 

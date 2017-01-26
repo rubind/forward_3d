@@ -22,7 +22,7 @@ slice_width		3
 # Parallel to slit
 xdithers		[0., 0.025, 0, 0.025]*2 + [0.02]
 # Perpendicular to slit
-ydithers		[0., 0., 0.025, 0.025]*2 + [0.02]
+ydithers		[0., 0., 0.075, 0.075]*2 + [0.02]
 # Radians:
 thetadithers		[0]*4 + [1.570796]*4 + [0.785398]
 scaledithers		[1.]*8 + [0.01]
@@ -32,3 +32,4 @@ processes		20
 
 max_noise_to_signal	0
 
+jacobian_instead	0
