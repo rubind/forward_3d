@@ -37,7 +37,7 @@ def get_params():
 def load_basis_fn():
     basisfns = {}
     for item in unique(thetadithers):
-        f = pyfits.open("../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits" % item)
+        f = pyfits.open(basis_fl % item)
         basis = f[0].data
         f.close()
         vals0 = arange(len(basis), dtype=float64)
@@ -125,7 +125,7 @@ def make_jacobian():
 
 
 def make_dither(inputs):
-    k, node_vals, resid = inputs
+    k, node_vals, resid, node_xy = inputs
     outputs = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     gradient = zeros(len(node_xy), dtype=float64)
 
@@ -156,8 +156,8 @@ def make_dither(inputs):
     return outputs, gradient
                                            
     
-def get_scene(node_vals, xdithers, ydithers, thetadithers, resid = None):
-    results = pool.map(make_dither, [(k, node_vals, resid) for k in range(n_slice)])
+def get_scene(node_vals, xdithers, ydithers, thetadithers, node_xy, resid = None):
+    results = pool.map(make_dither, [(k, node_vals, resid, node_xy) for k in range(n_slice)])
         
     outputs = 0.
     gradient = 0.
@@ -199,11 +199,11 @@ def get_spline_nodes(scale = 0.9):
     return node_xy, array(wavelength_splines)
     
 def chi2fn(x):
-    scene, NA = get_scene(x, xdithers, ydithers, thetadithers)
+    scene, NA = get_scene(x, xdithers, ydithers, thetadithers, node_xy)
     resid = true_scene - scene
     save_img(resid, "resid.fits")
     
-    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, resid = resid)
+    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, node_xy, resid = resid)
 
     print sum(resid**2.), log10(sum(resid**2.))
     return sum(resid**2.), gradient
@@ -253,16 +253,46 @@ pool = mp.Pool(processes = params["processes"])
 
 #true_node_vals = arange(len(node_xy)*n_wave_spline, dtype=float64)
 
-true_node_vals = random.normal(size = len(node_xy))
+if params["galaxy_model"] == "random":
+    basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
 
-save_img(true_node_vals, "true_node_vals.fits")
+    true_node_vals = random.normal(size = len(node_xy))
+    save_img(true_node_vals, "true_node_vals.fits")
 
+    t = time.time()
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy)
+    t2 = time.time()
+    
+    print "True scene in ", t2 - t
 
-t = time.time()
-true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers)
-t2 = time.time()
+if params["galaxy_model"] == "points":
+    basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
 
-print "True scene in ", t2 - t
+    true_node_vals = zeros(len(node_xy), dtype=float64)
+    true_node_vals[0] = 1
+    true_node_vals[-1] = 0.5
+
+    save_img(true_node_vals, "true_node_vals.fits")
+
+    t = time.time()
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy)
+    t2 = time.time()
+    
+    print "True scene in ", t2 - t
+
+if params["galaxy_model"] == "load":
+    basis_fl = "../../psfs/galaxybasis_5_mas_rot=%.3f.fits"
+
+    tmp_node_xy = [(0, 0, 0, i) for i in range(n_wave_spline)]
+    true_node_vals = ones(len(tmp_node_xy), dtype=float64)
+
+    save_img(true_node_vals, "true_node_vals.fits")
+
+    t = time.time()
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, tmp_node_xy)
+    t2 = time.time()
+    
+    print "True scene in ", t2 - t
 
 
 if params["max_noise_to_signal"] > 0:
