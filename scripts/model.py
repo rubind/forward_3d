@@ -37,7 +37,7 @@ def get_params():
 def load_basis_fn():
     basisfns = {}
     for item in unique(thetadithers):
-        f = pyfits.open("../../psfs/basis_5_mas_rot=%.3f.fits" % item)
+        f = pyfits.open("../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits" % item)
         basis = f[0].data
         f.close()
         vals0 = arange(len(basis), dtype=float64)
@@ -90,29 +90,36 @@ def get_wave_to_inds():
         wave_to_inds.append(the_ranges)
     return wave_to_inds
 
-def make_jacobian():
-    jacobian = zeros([len(xdithers)*n_slice*(slice_width/pixel_scale)*n_wave, len(node_xy)], dtype=float64)
 
-    for i in range(len(node_xy)):
-        tmpout = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
-
-        for m in range(len(xdithers)):
-            nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
-            nodey = node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
-            
-            basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
-
-
-            for k in range(n_slice):
+def single_param_jacobian(i):
+    tmpout = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
+    
+    for m in range(len(xdithers)):
+        nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
+        nodey = node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
+        
+        basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
+        
+        
+        for k in range(n_slice):
+            for n in range(n_subwave): # Subsampled wavelength                                                                                
+                unbinned_term = basis_eval[:,k*30:(k+1)*30]
                 
+                for item in wave_to_inds[n]:
+                    tmpout[m, k, :,item[2]] += sum(unbinned_term[:,item[0]:item[1]], axis = 1)*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
 
-                for n in range(n_subwave): # Subsampled wavelength
-                    unbinned_term = basis_eval[:,k*30:(k+1)*30]
-                    
-                    for item in wave_to_inds[n]:
-                        tmpout[m, k, :,item[2]] += sum(unbinned_term[:,item[0]:item[1]], axis = 1)*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
+    return reshape(tmpout, len(xdithers)*n_slice*(slice_width/pixel_scale)*n_wave)
 
-        jacobian[:, i] += reshape(tmpout, len(xdithers)*n_slice*(slice_width/pixel_scale)*n_wave)
+
+
+def make_jacobian():
+    jacobian = pool.map(single_param_jacobian, range(len(node_xy)))
+    jacobian = array(jacobian)
+
+    print "jacobian", jacobian.shape
+    if len(jacobian) < 20000:
+        jacobian = transpose(jacobian)
+    print "jacobian", jacobian.shape
 
     return jacobian
 
