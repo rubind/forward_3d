@@ -91,7 +91,9 @@ def get_wave_to_inds():
     return wave_to_inds
 
 
-def single_param_jacobian(i):
+def single_param_jacobian(args):
+    i, basis_fns = args
+
     tmpout = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     
     for m in range(len(xdithers)):
@@ -113,7 +115,7 @@ def single_param_jacobian(i):
 
 
 def make_jacobian():
-    jacobian = pool.map(single_param_jacobian, range(len(node_xy)))
+    jacobian = pool.map(single_param_jacobian, [(i, basis_fns) for i in range(len(node_xy))])
     jacobian = array(jacobian)
 
     print "jacobian", jacobian.shape
@@ -125,7 +127,7 @@ def make_jacobian():
 
 
 def make_dither(inputs):
-    k, node_vals, resid, node_xy = inputs
+    k, node_vals, resid, node_xy, basis_fns = inputs
     outputs = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     gradient = zeros(len(node_xy), dtype=float64)
 
@@ -156,8 +158,8 @@ def make_dither(inputs):
     return outputs, gradient
                                            
     
-def get_scene(node_vals, xdithers, ydithers, thetadithers, node_xy, resid = None):
-    results = pool.map(make_dither, [(k, node_vals, resid, node_xy) for k in range(n_slice)])
+def get_scene(node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns, resid = None):
+    results = pool.map(make_dither, [(k, node_vals, resid, node_xy, basis_fns) for k in range(n_slice)])
         
     outputs = 0.
     gradient = 0.
@@ -199,11 +201,11 @@ def get_spline_nodes(scale = 0.9):
     return node_xy, array(wavelength_splines)
     
 def chi2fn(x):
-    scene, NA = get_scene(x, xdithers, ydithers, thetadithers, node_xy)
+    scene, NA = get_scene(x, xdithers, ydithers, thetadithers, node_xy, basis_fns)
     resid = true_scene - scene
     save_img(resid, "resid.fits")
     
-    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, node_xy, resid = resid)
+    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, node_xy, basis_fns, resid = resid)
 
     print sum(resid**2.), log10(sum(resid**2.))
     return sum(resid**2.), gradient
@@ -239,7 +241,7 @@ n_wave_spline = int(around(n_subwave/(basis_step/pixel_scale * oversample))) + 1
 print "n_wave_spline", n_wave_spline
 
 wave_to_inds = get_wave_to_inds()
-basis_fns = load_basis_fn()
+
 node_xy, wavelength_splines = get_spline_nodes(scale = params["max_spline_rad"])
 print "number of nodes", len(node_xy)
 
@@ -255,18 +257,22 @@ pool = mp.Pool(processes = params["processes"])
 
 if params["galaxy_model"] == "random":
     basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
+    basis_fns = load_basis_fn()
+
 
     true_node_vals = random.normal(size = len(node_xy))
     save_img(true_node_vals, "true_node_vals.fits")
 
     t = time.time()
-    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy)
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns)
     t2 = time.time()
     
     print "True scene in ", t2 - t
 
 if params["galaxy_model"] == "points":
     basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
+    basis_fns = load_basis_fn()
+
 
     true_node_vals = zeros(len(node_xy), dtype=float64)
     true_node_vals[0] = 1
@@ -275,24 +281,32 @@ if params["galaxy_model"] == "points":
     save_img(true_node_vals, "true_node_vals.fits")
 
     t = time.time()
-    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy)
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns)
     t2 = time.time()
     
     print "True scene in ", t2 - t
 
 if params["galaxy_model"] == "load":
     basis_fl = "../../psfs/galaxybasis_5_mas_rot=%.3f.fits"
+    basis_fns = load_basis_fn()
+    
 
     tmp_node_xy = [(0, 0, 0, i) for i in range(n_wave_spline)]
     true_node_vals = ones(len(tmp_node_xy), dtype=float64)
 
     save_img(true_node_vals, "true_node_vals.fits")
 
+    print "Here"
     t = time.time()
-    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, tmp_node_xy)
-    t2 = time.time()
     
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, tmp_node_xy, basis_fns)
+    t2 = time.time()
+
     print "True scene in ", t2 - t
+    print "Made scene"
+    basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
+    basis_fns = load_basis_fn()
+
 
 
 if params["max_noise_to_signal"] > 0:
