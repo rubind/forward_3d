@@ -33,6 +33,9 @@ true_scene_reshape = reshape(true_scene, len(j))
 
 print j.shape, true_scene.shape
 
+if j.shape[1] != len(true_node_vals):
+    print "No vals!"
+    true_node_vals = zeros(j.shape[1], dtype=float64)
 npar = len(true_node_vals)
 
 j = concatenate((j, diag(regularization*ones(npar, dtype=float64))))
