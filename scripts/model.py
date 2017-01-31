@@ -97,8 +97,8 @@ def single_param_jacobian(args):
     tmpout = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     
     for m in range(len(xdithers)):
-        nodex = node_xy[i][1]*cos(thetadithers[m]) - node_xy[i][2]*sin(thetadithers[m])
-        nodey = node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
+        nodex = node_xy[i][1]*cos(thetadithers[m]) + node_xy[i][2]*sin(thetadithers[m])
+        nodey = -node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
         
         basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
         
