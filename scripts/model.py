@@ -234,6 +234,8 @@ ydithers = params["ydithers"]
 thetadithers = params["thetadithers"]
 scaledithers = params["scaledithers"]
 
+wavelen = params["wave"]/10000. # Convert to microns
+
 ########################################## Done with setup ##########################################
 
 assert isclose(n_subwave % (basis_step/pixel_scale * oversample), 1.0)
@@ -256,7 +258,7 @@ pool = mp.Pool(processes = params["processes"])
 #true_node_vals = arange(len(node_xy)*n_wave_spline, dtype=float64)
 
 if params["galaxy_model"] == "random":
-    basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
+    basis_fl = "../../psfs/basis_5_mas_rot=%s_spl=0.050_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
 
 
@@ -270,7 +272,7 @@ if params["galaxy_model"] == "random":
     print "True scene in ", t2 - t
 
 if params["galaxy_model"] == "points":
-    basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
+    basis_fl = "../../psfs/basis_5_mas_rot=%s_spl=0.050_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
 
 
@@ -287,7 +289,7 @@ if params["galaxy_model"] == "points":
     print "True scene in ", t2 - t
 
 if params["galaxy_model"] == "load":
-    basis_fl = "../../psfs/galaxybasis_5_mas_rot=%.3f.fits"
+    basis_fl = "../../psfs/galaxybasis_5_mas_rot=%s_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
     
 
@@ -304,7 +306,7 @@ if params["galaxy_model"] == "load":
 
     print "True scene in ", t2 - t
     print "Made scene"
-    basis_fl = "../../psfs/basis_5_mas_rot=%.3f_spl=0.050.fits"
+    basis_fl = "../../psfs/basis_5_mas_rot=%s_spl=0.050_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
 
 
