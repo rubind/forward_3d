@@ -2,6 +2,7 @@ import pyfits
 from numpy import *
 import sys
 
+
 for i in range(1, len(sys.argv)):
     newim = sys.argv[i].replace(".fits", "_ds9.fits")
     assert newim != sys.argv[i]
@@ -17,4 +18,5 @@ for i in range(1, len(sys.argv)):
     f[0].data = dat
     f.writeto(newim, clobber = "True")
     f.close()
+
 
