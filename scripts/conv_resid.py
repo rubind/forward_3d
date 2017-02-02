@@ -18,8 +18,18 @@ f.close()
 resid = array(resid, dtype=float64)
 psf = array(psf, dtype=float64)
 
+print resid.shape
 
-conv = np.real(ft.ifft2(ft.fft2(resid) * ft.fft2(psf))
+conv = resid*0
+
+for i in range(conv.shape[0]):
+    for j in range(conv.shape[3]):
+        theshape = conv.shape[1:3]
+
+        overtwo = len(psf)/2
+        psftmp = psf[overtwo-theshape[0]/2, overtwo+theshape[0]/2,
+                     overtwo-theshape[1]/2, overtwo+theshape[1]/2]
+        conv[i, :, :, j] = real(ft.ifft2(ft.fft2(resid[i, :, :, j]) * ft.fft2(psftmp)))
 
 newim = im.replace(".fits", "_conv.fits")
 assert newim != im
