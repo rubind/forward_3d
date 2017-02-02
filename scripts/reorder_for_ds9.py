@@ -10,7 +10,7 @@ dat = f[0].data
 
 
 print dat.shape
-dat = transpose(dat, [0,3,1,2])
+dat = transpose(dat, [0,3,2,1])
 print dat.shape
 
 f[0].data = dat
