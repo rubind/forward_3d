@@ -11,7 +11,11 @@ f = pyfits.open(im)
 resid = f[0].data
 f.close()
 
-f = pyfits.open("../../psfs/IFC_PSF_%.2f_micron_50_mas.fits" % wv)
+try:
+    f = pyfits.open("../../psfs/IFC_PSF_%.2f_micron_50+150_mas.fits" % wv)
+except:
+    f = pyfits.open("../../../psfs/IFC_PSF_%.2f_micron_50+150_mas.fits" % wv)
+
 psf = f[0].data
 f.close()
 
@@ -23,13 +27,19 @@ print resid.shape
 conv = resid*0
 
 for i in range(conv.shape[0]):
-    for j in range(conv.shape[3]):
-        theshape = conv.shape[1:3]
+    for j in range(conv.shape[1]):
+        theshape = conv.shape[2:]
+        
 
-        overtwo = len(psf)/2
-        psftmp = psf[overtwo-theshape[0]/2, overtwo+theshape[0]/2,
-                     overtwo-theshape[1]/2, overtwo+theshape[1]/2]
-        conv[i, :, :, j] = real(ft.ifft2(ft.fft2(resid[i, :, :, j]) * ft.fft2(psftmp)))
+        psftmp = psf[psf.shape[0]/2-theshape[0]/2: psf.shape[0]/2+theshape[0]/2,
+                     psf.shape[1]/2-theshape[1]/2: psf.shape[1]/2+theshape[1]/2]
+
+        print psftmp.shape
+
+        adjust = psftmp *0
+        adjust[psftmp.shape[0]/2, psftmp.shape[1]/2] = 1.
+
+        conv[i, j] = real(ft.ifft2(ft.fft2(resid[i, j]) * ft.fft2(psftmp) * ft.fft2(adjust)))
 
 newim = im.replace(".fits", "_conv.fits")
 assert newim != im

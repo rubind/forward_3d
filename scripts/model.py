@@ -100,7 +100,7 @@ def single_param_jacobian(args):
         nodex = node_xy[i][1]*cos(thetadithers[m]) + node_xy[i][2]*sin(thetadithers[m])
         nodey = -node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
         
-        basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m], yvals - nodey - ydithers[m])
+        basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m] + float(sys.argv[2]), yvals - nodey - ydithers[m] + float(sys.argv[3]))
         
         
         for k in range(n_slice):
