@@ -46,6 +46,8 @@ max_noise_to_signal	""" + str(0.05*include_noise) + """
 galaxy_model            "load"
 jacobian_instead	1
 """)
+
+raw_input("Removing old results. Proceed?")
     
 xdithers = [randsym(0.05) for i in range(5)]
 ydithers = [randsym(0.05) for i in range(5)]
@@ -54,13 +56,16 @@ scaledithers = [1]*4 + [0.01]
 
 fw = open("run_wrap.sh", 'w')
 
-pwd = commands.getoutput(pwd)
+pwd = commands.getoutput("pwd")
 
 for j in range(4):
     for include_noise in [0, 1]:
         for wv in [0.8, 0.5, 0.6, 1.0]:
             wd = "test_run_ndith=%02i_nrot=%02i_wv=%.2f_%02i_noise=%i" % (len(xdithers), len(unique(thetadithers)), wv, j, include_noise)
+            commands.getoutput("rm -fr " + wd)
+            commands.getoutput("mkdir " + wd)
             writefl(wd)
+            
             
             fw.write("cd " + pwd + "/" + wd + '\n')
             fw.write("python ../model.py paramfile.txt\n")
