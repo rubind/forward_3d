@@ -155,6 +155,7 @@ def make_dither(inputs):
                 if resid != None:
                     gradient[i] += -2.*sum(whole_term*resid[m,k]*wavelength_splines[node_xy[i][3],n]*scaledithers[m])
 
+
     return outputs, gradient
                                            
     
@@ -252,6 +253,7 @@ yvals = arange(-1.5, 1.5, 0.005)
 
 pool = mp.Pool(processes = params["processes"])
 
+
 ########################################## Done with derived quantities ##########################################
 
 
@@ -292,9 +294,17 @@ if params["galaxy_model"] == "load":
     basis_fl = "../../psfs/galaxybasis_5_mas_rot=%s_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
     
+    spec_fl = "../../spectrum_subsamp=10x_wv=%.2f.txt" % wavelen
+    spec_oversample = loadtxt(spec_fl)
 
+    n_wave_spline_tmp = n_wave_spline
+    n_wave_spline = n_subwave
+    wavelength_splines_tmp = wavelength_splines
+    wavelength_splines = identity(n_subwave, dtype=float64)
+
+    
     tmp_node_xy = [(0, 0, 0, i) for i in range(n_wave_spline)]
-    true_node_vals = ones(len(tmp_node_xy), dtype=float64)
+    true_node_vals = spec_oversample[:n_subwave]
 
     save_img(true_node_vals, "true_node_vals.fits")
 
@@ -306,6 +316,10 @@ if params["galaxy_model"] == "load":
 
     print "True scene in ", t2 - t
     print "Made scene"
+
+    n_wave_spline = n_wave_spline_tmp
+    wavelength_splines = wavelength_splines_tmp
+
     basis_fl = "../../psfs/basis_5_mas_rot=%s_spl=0.050_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
 
