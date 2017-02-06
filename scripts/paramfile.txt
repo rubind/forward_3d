@@ -14,7 +14,7 @@ n_slice			20
 # Number of wavelengths to simulate. Must be large enough for n_subwave
 n_wave			7
 # Number of sub-sampled wavelengths:
-n_subwave		36
+n_subwave		51
 oversample		10
 
 # Arcseconds, not pixels!
