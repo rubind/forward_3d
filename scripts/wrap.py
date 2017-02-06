@@ -14,10 +14,10 @@ slice_scale		0.15
 # Arcseconds:
 basis_step		0.05
 # Relative to FoV:
-max_spline_rad		0.5
+max_spline_rad		0.6
 
 # In Angstroms:
-wave			8000
+wave			""" + str(wv*10000) + """
 
 n_slice			20
 # Number of wavelengths to simulate. Must be large enough for n_subwave
@@ -60,7 +60,7 @@ pwd = commands.getoutput("pwd")
 
 for j in range(4):
     for include_noise in [0, 1]:
-        for wv in [0.8, 0.5, 0.6, 1.0]:
+        for wv in [0.8, 0.5, 1.0]:
             wd = "test_run_ndith=%02i_nrot=%02i_wv=%.2f_%02i_noise=%i" % (len(xdithers), len(unique(thetadithers)), wv, j, include_noise)
             commands.getoutput("rm -fr " + wd)
             commands.getoutput("mkdir " + wd)
