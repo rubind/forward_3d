@@ -127,7 +127,7 @@ def make_jacobian():
 
 
 def make_dither(inputs):
-    k, node_vals, resid, node_xy, basis_fns = inputs
+    k, node_vals, resid, node_xy, basis_fns, wavelength_splines = inputs
     outputs = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     gradient = zeros(len(node_xy), dtype=float64)
 
@@ -150,18 +150,22 @@ def make_dither(inputs):
                 
                 for item in wave_to_inds[n]:
                     whole_term[:,item[2]] = sum(unbinned_term[:,item[0]:item[1]], axis = 1)
-
+                
                 outputs[m, k] += whole_term*node_vals[i]*wavelength_splines[node_xy[i][3],n]*scaledithers[m]
+                
                 if resid != None:
                     gradient[i] += -2.*sum(whole_term*resid[m,k]*wavelength_splines[node_xy[i][3],n]*scaledithers[m])
 
-
+    
     return outputs, gradient
                                            
     
-def get_scene(node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns, resid = None):
-    results = pool.map(make_dither, [(k, node_vals, resid, node_xy, basis_fns) for k in range(n_slice)])
-        
+def get_scene(node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns, wavelength_splines, resid = None):
+    #for k in range(n_slice):
+    #    make_dither([k, node_vals, resid, node_xy, basis_fns])
+    
+    results = pool.map(make_dither, [(k, node_vals, resid, node_xy, basis_fns, wavelength_splines) for k in range(n_slice)])
+    
     outputs = 0.
     gradient = 0.
 
@@ -202,11 +206,11 @@ def get_spline_nodes(scale = 0.9):
     return node_xy, array(wavelength_splines)
     
 def chi2fn(x):
-    scene, NA = get_scene(x, xdithers, ydithers, thetadithers, node_xy, basis_fns)
+    scene, NA = get_scene(x, xdithers, ydithers, thetadithers, node_xy, basis_fns, wavelength_splines)
     resid = true_scene - scene
     save_img(resid, "resid.fits")
     
-    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, node_xy, basis_fns, resid = resid)
+    scene2, gradient = get_scene(x, xdithers, ydithers, thetadithers, node_xy, basis_fns, wavelength_splines, resid = resid)
 
     print sum(resid**2.), log10(sum(resid**2.))
     return sum(resid**2.), gradient
@@ -268,7 +272,7 @@ if params["galaxy_model"] == "random":
     save_img(true_node_vals, "true_node_vals.fits")
 
     t = time.time()
-    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns)
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns, wavelength_splines)
     t2 = time.time()
     
     print "True scene in ", t2 - t
@@ -285,7 +289,7 @@ if params["galaxy_model"] == "points":
     save_img(true_node_vals, "true_node_vals.fits")
 
     t = time.time()
-    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns)
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, node_xy, basis_fns, wavelength_splines)
     t2 = time.time()
     
     print "True scene in ", t2 - t
@@ -301,17 +305,19 @@ if params["galaxy_model"] == "load":
     n_wave_spline = n_subwave
     wavelength_splines_tmp = wavelength_splines
     wavelength_splines = identity(n_subwave, dtype=float64)
+    wave_to_inds = get_wave_to_inds()
 
     
     tmp_node_xy = [(0, 0, 0, i) for i in range(n_wave_spline)]
     true_node_vals = spec_oversample[:n_subwave]
+
 
     save_img(true_node_vals, "true_node_vals.fits")
 
     print "Here"
     t = time.time()
     
-    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, tmp_node_xy, basis_fns)
+    true_scene, NA = get_scene(true_node_vals, xdithers, ydithers, thetadithers, tmp_node_xy, basis_fns, wavelength_splines)
     t2 = time.time()
 
     print "True scene in ", t2 - t
@@ -319,6 +325,7 @@ if params["galaxy_model"] == "load":
 
     n_wave_spline = n_wave_spline_tmp
     wavelength_splines = wavelength_splines_tmp
+    wave_to_inds = get_wave_to_inds()
 
     basis_fl = "../../psfs/basis_5_mas_rot=%s_spl=0.050_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
