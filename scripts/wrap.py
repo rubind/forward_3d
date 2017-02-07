@@ -21,7 +21,7 @@ wave		        """ + str(wv*10000) + """
 
 n_slice			20
 # Number of wavelengths to simulate. Must be large enough for n_subwave
-n_wave			8
+n_wave			10
 # Number of sub-sampled wavelengths:
 n_subwave		61
 oversample		10
@@ -60,7 +60,7 @@ pwd = commands.getoutput("pwd")
 
 for j in range(4):
     for include_noise in [0, 1]:
-        for wv in [0.8, 0.5, 0.6, 1.0]:
+        for wv in [0.8, 0.5, 1.0]:
             wd = "test_run_ndith=%02i_nrot=%02i_wv=%.2f_%02i_noise=%i" % (len(xdithers), len(unique(thetadithers)), wv, j, include_noise)
             commands.getoutput("rm -fr " + wd)
             commands.getoutput("mkdir " + wd)
@@ -68,8 +68,8 @@ for j in range(4):
             
             
             fw.write("cd " + pwd + "/" + wd + '\n')
-            fw.write("python ../model.py paramfile.txt\n")
-            fw.write("python ../solve.py 0 &\n")
+            fw.write("python ../model.py paramfile.txt > log1.txt\n")
+            fw.write("python ../solve.py 0 > log2.txt &\n")
 fw.close()
 
 

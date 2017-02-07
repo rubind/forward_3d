@@ -294,7 +294,7 @@ if params["galaxy_model"] == "load":
     basis_fl = "../../psfs/galaxybasis_5_mas_rot=%s_wv=%.2f.fits" % ("%.3f", wavelen)
     basis_fns = load_basis_fn()
     
-    spec_fl = "../../spectrum_subsamp=10x_wv=%.2f.txt" % wavelen
+    spec_fl = "../../psfs/spectrum_subsamp=10x_wv=%.2f.txt" % wavelen
     spec_oversample = loadtxt(spec_fl)
 
     n_wave_spline_tmp = n_wave_spline
