@@ -14,10 +14,10 @@ slice_scale		0.15
 # Arcseconds:
 basis_step		0.05
 # Relative to FoV:
-max_spline_rad		0.5
+max_spline_rad		0.6
 
 # In Angstroms:
-wave			8000
+wave		        """ + str(wv*10000) + """
 
 n_slice			20
 # Number of wavelengths to simulate. Must be large enough for n_subwave
