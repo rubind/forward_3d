@@ -21,7 +21,7 @@ wave			""" + str(wv*10000) + """
 
 n_slice			20
 # Number of wavelengths to simulate. Must be large enough for n_subwave
-n_wave			8
+n_wave			10
 # Number of sub-sampled wavelengths:
 n_subwave		61
 oversample		10
@@ -68,8 +68,8 @@ for j in range(4):
             
             
             fw.write("cd " + pwd + "/" + wd + '\n')
-            fw.write("python ../model.py paramfile.txt\n")
-            fw.write("python ../solve.py 0 &\n")
+            fw.write("python ../model.py paramfile.txt > log1.txt\n")
+            fw.write("python ../solve.py 0 > log2.txt &\n")
 fw.close()
 
 
