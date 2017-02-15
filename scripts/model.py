@@ -92,7 +92,7 @@ def get_wave_to_inds():
 
 
 def single_param_jacobian(args):
-    i, basis_fns = args
+    i, basis_fns, nudgex, nudgey = args
 
     tmpout = zeros([len(xdithers), n_slice, slice_width/pixel_scale, n_wave], dtype=float64)
     
@@ -100,7 +100,7 @@ def single_param_jacobian(args):
         nodex = node_xy[i][1]*cos(thetadithers[m]) + node_xy[i][2]*sin(thetadithers[m])
         nodey = -node_xy[i][1]*sin(thetadithers[m]) + node_xy[i][2]*cos(thetadithers[m])
         
-        basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m] + 0.0025, yvals - nodey - ydithers[m] + 0.005)
+        basis_eval = basis_fns[thetadithers[m]](xvals - nodex - xdithers[m] + 0.0025 - nudgex, yvals - nodey - ydithers[m] + 0.005 - nudgey)
         
         
         for k in range(n_slice):
@@ -114,8 +114,8 @@ def single_param_jacobian(args):
 
 
 
-def make_jacobian():
-    jacobian = pool.map(single_param_jacobian, [(i, basis_fns) for i in range(len(node_xy))])
+def make_jacobian(nudgex, nudgey):
+    jacobian = pool.map(single_param_jacobian, [(i, basis_fns, nudgex, nudgey) for i in range(len(node_xy))])
     jacobian = array(jacobian)
 
     print "jacobian", jacobian.shape
@@ -348,8 +348,50 @@ save_img(true_scene, "true_scene.fits")
 
 
 if params["jacobian_instead"] == 1:
-    jacobian = make_jacobian()
+    jacobian = make_jacobian(nudgex = 0, nudgey = 0)
+    save_img(jacobian, "jacobian0.fits")
+
+    true_scene_reshape = reshape(true_scene, len(jacobian))
+
+    print jacobian.shape, true_scene.shape
+
+    npar = len(jacobian[0])
+
+    solved = linalg.lstsq(jacobian, true_scene_reshape)[0]
+
+    est_model0 = dot(jacobian, solved)
+    est_model = reshape(est_model0, true_scene.shape)
+
+    resid = true_scene - est_model
+    save_img(resid, "resid0.fits")
+
+    jacobiandx = make_jacobian(nudgex = 0.01, nudgey = 0)
+    jacobiandy = make_jacobian(nudgex = 0.0, nudgey = 0.01)
+
+    est_modeldx = dot(jacobiandx, solved)
+    est_modeldy = dot(jacobiandy, solved)
+    
+    jdx = (est_modeldx - est_model0)/0.01
+    jdy = (est_modeldy - est_model0)/0.01
+    
+    jcomb = zeros([len(est_model0), 2], dtype=float64)
+    jcomb[:,0] = jdx
+    jcomb[:,1] = jdy
+
+    solvedcomb = linalg.lstsq(jcomb, true_scene_reshape - est_model0)[0]
+    print "Solved dx, dy ", solvedcomb
+    
+    jacobian = make_jacobian(nudgex = solvedcomb[0], nudgey = solvedcomb[1])
     save_img(jacobian, "jacobian.fits")
+
+    solved = linalg.lstsq(jacobian, true_scene_reshape)[0]
+    est_model0 = dot(jacobian, solved)
+    est_model = reshape(est_model0, true_scene.shape)
+    resid = true_scene - est_model
+    save_img(resid, "resid.fits")
+
+
+
 
     #true_scene2 = dot(jacobian, true_node_vals)
     #true_scene2 = reshape(true_scene2, true_scene.shape)
