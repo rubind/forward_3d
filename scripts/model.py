@@ -356,6 +356,7 @@ save_img(true_scene, "true_scene.fits")
 
 
 if params["jacobian_instead"] == 1:
+    print "Making original jacobian..."
     jacobian = make_jacobian(nudgex = 0, nudgey = 0)
     save_img(jacobian, "jacobian0.fits")
 
@@ -365,6 +366,8 @@ if params["jacobian_instead"] == 1:
 
     npar = len(jacobian[0])
 
+    print "Solving original jacobian..."
+
     solved = linalg.lstsq(jacobian, true_scene_reshape)[0]
 
     est_model0 = dot(jacobian, solved)
@@ -373,7 +376,9 @@ if params["jacobian_instead"] == 1:
     resid = true_scene - est_model
     save_img(resid, "resid0.fits")
 
+    print "Making dx jacobian..."
     jacobiandx = make_jacobian(nudgex = 0.01, nudgey = 0)
+    print "Making dy jacobian..."
     jacobiandy = make_jacobian(nudgex = 0.0, nudgey = 0.01)
 
     est_modeldx = dot(jacobiandx, solved)
@@ -386,11 +391,17 @@ if params["jacobian_instead"] == 1:
     jcomb[:,0] = jdx
     jcomb[:,1] = jdy
 
+    print "Solving for dx and dy..."
+
     solvedcomb = linalg.lstsq(jcomb, true_scene_reshape - est_model0)[0]
     print "Solved dx, dy ", solvedcomb
     
+    print "Making final jacobian..."
+
     jacobian = make_jacobian(nudgex = solvedcomb[0], nudgey = solvedcomb[1])
     save_img(jacobian, "jacobian.fits")
+
+    print "Doing final solve..."
 
     solved = linalg.lstsq(jacobian, true_scene_reshape)[0]
     est_model0 = dot(jacobian, solved)
