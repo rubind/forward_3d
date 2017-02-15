@@ -300,6 +300,7 @@ if params["galaxy_model"] == "load":
     
     spec_fl = "../../psfs/spectrum_subsamp=10x_wv=%.2f.txt" % wavelen
     spec_oversample = loadtxt(spec_fl)
+    
 
     n_wave_spline_tmp = n_wave_spline
     n_wave_spline = n_subwave
@@ -310,7 +311,14 @@ if params["galaxy_model"] == "load":
     
     tmp_node_xy = [(0, 0, 0, i) for i in range(n_wave_spline)]
     true_node_vals = spec_oversample[:n_subwave]
+    # Now, apodize
+    for i in range(12):
+        # i ranges from 0 to 11
+        sci = i/11.
+        true_node_vals[i] *= 3*sci**2. - 2.*sci**3.
+        true_node_vals[-1 -i] *= 3*sci**2. - 2.*sci**3.
 
+    print "true_node_vals", true_node_vals
 
     save_img(true_node_vals, "true_node_vals.fits")
 
